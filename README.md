@@ -20,7 +20,7 @@ A RESTful API that converts JSON message history into WhatsApp-style chat screen
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/whatsapp-chat-mockup-api.git
+   git clone https://github.com/yourusername/wa-mock-api.git
    cd whatsapp-chat-mockup-api
    ```
 
