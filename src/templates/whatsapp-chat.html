@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatsApp Chat</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background-color: #e5ddd5;
+      margin: 0;
+      padding: 0;
+      width: {{width}}px;
+      min-height: 100vh;
+      margin: 0 auto;
+    }
+
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background-color: #e5ddd5;
+      position: relative;
+    }
+
+    .chat-header {
+      background-color: #075e54;
+      color: white;
+      padding: 15px 20px;
+      display: flex;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .back-button {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 20px;
+      margin-right: 15px;
+      cursor: pointer;
+    }
+
+    .profile-pic {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: #ddd;
+      margin-right: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: #555;
+    }
+
+    .chat-info {
+      flex: 1;
+    }
+
+    .chat-info h2 {
+      font-size: 16px;
+      font-weight: 500;
+      margin: 0 0 2px 0;
+    }
+
+    .chat-info p {
+      font-size: 12px;
+      margin: 0;
+      opacity: 0.8;
+    }
+
+    .chat-messages {
+      padding: 10px;
+      flex: 1;
+      overflow-y: auto;
+      background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABnSURBVDhP7c0xCsAgDETR1F20u3fz/z9tQYIYwYI3PcF7YcDnQ5L3JjOjqjAzA4CIQEQgIhARiAhEBCICEYGIQEQgIhARiAhEBCICEYGIQEQgIhARiAhEBCICEYGIQEQgIhB5AeW5Gg5w5YjDAAAAAElFTkSuQmCC") !important;
+      background-color: #e5ddd5;
+      background-attachment: fixed;
+      min-height: calc(100vh - 60px);
+    }
+
+    .message {
+      display: flex;
+      margin-bottom: 10px;
+      padding: 0 20px 0 10px;
+      position: relative;
+    }
+
+    .message.sent {
+      justify-content: flex-end;
+    }
+
+    .message.received {
+      justify-content: flex-start;
+    }
+
+    .message-content {
+      max-width: 70%;
+      padding: 8px 12px 8px 9px;
+      border-radius: 7.5px;
+      position: relative;
+      word-wrap: break-word;
+      margin: 2px 0;
+    }
+
+    /* Add tail to sent messages */
+    .message.sent .message-content:after {
+      content: '';
+      position: absolute;
+      right: -8px;
+      bottom: 0;
+      width: 8px;
+      height: 13px;
+      background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 13'%3E%3Cpath opacity='.13' d='M5.188 12H0V.807l6.467 8.625C7.526 10.844 6.958 12 5.188 12z'/%3E%3Cpath fill='%23DCF8C6' d='M5.188 13H0V1.807l6.467 8.625C7.526 11.844 6.958 13 5.188 13z'/%3E%3C/svg%3E");
+      background-position: 50%;
+      background-repeat: no-repeat;
+      background-size: contain;
+    }
+
+    /* Add tail to received messages */
+    .message.received .message-content:before {
+      content: '';
+      position: absolute;
+      left: -8px;
+      bottom: 0;
+      width: 8px;
+      height: 13px;
+      background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 13'%3E%3Cpath opacity='.13' d='M1.533 9.432L8 .807V12H2.812C1.042 12 .474 10.844 1.533 9.432z'/%3E%3Cpath fill='%23fff' d='M1.533 10.432L8 1.807V13H2.812C1.042 13 .474 11.844 1.533 10.432z'/%3E%3C/svg%3E");
+      background-position: 50%;
+      background-repeat: no-repeat;
+      background-size: contain;
+    }
+
+    /* Adjust message spacing */
+    .message {
+      margin-bottom: 2px;
+    }
+
+    .message.sent .message-content {
+      background-color: #dcf8c6;
+      margin-left: auto;
+      margin-right: 8px;
+      border-bottom-right-radius: 0;
+    }
+
+    .message.received .message-content {
+      background-color: white;
+      margin-left: 8px;
+      margin-right: auto;
+      border-bottom-left-radius: 0;
+    }
+
+    .message p {
+      margin: 0 0 5px 0;
+      font-size: 14px;
+      line-height: 1.4;
+      color: #111b21;
+    }
+
+    .message-time {
+      font-size: 11px;
+      color: #667781;
+      text-align: right;
+      display: inline-block;
+      margin-left: 8px;
+      position: relative;
+      bottom: -2px;
+      float: right;
+    }
+    
+    .message.sent .message-time {
+      color: #4a7b3c;
+    }
+    
+    /* Clear float */
+    .message-content:after {
+      content: '';
+      display: table;
+      clear: both;
+    }
+
+    .message.sent .message-time {
+      color: #4a7b3c;
+    }
+
+    /* Message status */
+    .message-status {
+      display: inline-block;
+      width: 16px;
+      height: 12px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='40 50 120 110'%3E%3Cdefs%3E%3Cmask id='a'%3E%3Crect width='200' height='200' fill='white'/%3E%3Cpath d='M60 95L80 115 110 85' stroke='black' stroke-width='20' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/mask%3E%3C/defs%3E%3Cpath d='M50 112L70 130l50-50' stroke='%234A90E2' stroke-width='8' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3Cpath d='M70 100l30 30 50-50' stroke='%234A90E2' stroke-width='8' stroke-linecap='round' stroke-linejoin='round' fill='none' mask='url(%23a)'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: contain;
+      margin-left: 3px;
+      margin-right: 1px;
+      vertical-align: middle;
+      position: relative;
+      top: 1px;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-header">
+      <button class="back-button">←</button>
+      <div class="profile-pic">
+        <svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+          <!-- Outer circle background -->
+          <circle cx="100" cy="100" r="100" fill="#8B92A5"/>
+          
+          <!-- Head circle -->
+          <circle cx="100" cy="70" r="35" fill="white"/>
+          
+          <!-- Body/shoulders as sharp lens shape -->
+          <path d="M 100 115
+                   C 140 115, 165 140, 165 150
+                   C 165 160, 140 185, 100 185
+                   C 60 185, 35 160, 35 150
+                   C 35 140, 60 115, 100 115 Z" 
+                   fill="white"/>
+        </svg>
+      </div>
+      <div class="chat-info">
+        <h2>{{recipientPhone}}</h2>
+        <p>last seen today at {{lastSeen}}</p>
+      </div>
+    </div>
+    <div class="chat-messages">
+      {{messages}}
+    </div>
+  </div>
+</body>
+</html>

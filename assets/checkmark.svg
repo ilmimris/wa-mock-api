@@ -1,0 +1,38 @@
+<svg width="200" height="200" viewBox="40 50 120 110" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Mask to crop the second checkmark where it overlaps the first -->
+    <mask id="cropMask">
+      <rect width="200" height="200" fill="white"/>
+      <!-- Black area removes the overlapping part - covering the entire overlap zone -->
+      <path d="M 60 95 
+              L 80 115 
+              L 110 85" 
+            stroke="black" 
+            stroke-width="20" 
+            stroke-linecap="round" 
+            stroke-linejoin="round" 
+            fill="none"/>
+    </mask>
+  </defs>
+  
+  <!-- First checkmark -->
+  <path d="M 50 112
+           L 70 130
+           L 120 80"
+        stroke="#4A90E2" 
+        stroke-width="8" 
+        stroke-linecap="round" 
+        stroke-linejoin="round" 
+        fill="none"/>
+  
+  <!-- Second checkmark (masked) -->
+  <path d="M 70 100
+           L 100 130
+           L 150 80"
+        stroke="#4A90E2" 
+        stroke-width="8" 
+        stroke-linecap="round" 
+        stroke-linejoin="round" 
+        fill="none"
+        mask="url(#cropMask)"/>
+</svg>
