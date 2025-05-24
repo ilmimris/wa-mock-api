@@ -3,17 +3,16 @@ const { ApiError } = require('./error.middleware');
 
 // Define validation schemas
 const messageSchema = Joi.object({
-  session_id: Joi.number().required(),
   timestamp: Joi.string().isoDate().required(),
   sender: Joi.string().valid('Bot', 'Customer').required(),
   content: Joi.string().required(),
-  awb_number: Joi.string().optional(),
   recipient_name: Joi.string().optional(),
   recipient_phone: Joi.string().optional()
 });
 
 const optionsSchema = Joi.object({
   width: Joi.number().min(300).max(1200).default(400),
+  headerDisplay: Joi.string().valid('name', 'phone').default('phone'),
   quality: Joi.string().valid('low', 'medium', 'high').default('high'),
   format: Joi.string().valid('png', 'jpeg', 'webp').default('png')
 });

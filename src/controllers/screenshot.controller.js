@@ -35,9 +35,7 @@ const generateScreenshot = async (req, res, next) => {
           message_count: messages.length,
           first_message_timestamp: firstMessage.timestamp,
           last_message_timestamp: lastMessage.timestamp,
-          generated_at: new Date().toISOString(),
-          session_id: firstMessage.session_id,
-          awb_number: firstMessage.awb_number
+          generated_at: new Date().toISOString()
         }
       }
     };

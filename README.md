@@ -5,7 +5,7 @@ A RESTful API that converts JSON message history into WhatsApp-style chat screen
 ## Features
 
 - Convert JSON message history to WhatsApp-style chat screenshots
-- Customizable output options (width, quality, format)
+- Customizable output options (width, quality, format, header display)
 - Realistic WhatsApp UI with proper message bubbles and timestamps
 - Support for both Bot and Customer messages
 - Responsive design that works on different screen sizes
@@ -59,16 +59,13 @@ The API will be available at `http://localhost:3000` by default.
 {
   "messages": [
     {
-      "session_id": 6762016005514153,
       "timestamp": "2025-05-22T16:48:26.858Z",
       "sender": "Bot",
       "content": "Hello, how can I help you today?",
-      "awb_number": "016005514153",
       "recipient_name": "John Doe",
       "recipient_phone": "+6281234567890"
     },
     {
-      "session_id": 6762016005514153,
       "timestamp": "2025-05-22T16:49:15.123Z",
       "sender": "Customer",
       "content": "Hi, I have a question about my order"
@@ -77,7 +74,8 @@ The API will be available at `http://localhost:3000` by default.
   "options": {
     "width": 400,
     "quality": "high",
-    "format": "png"
+    "format": "png",
+    "headerDisplay": "name"
   }
 }
 ```
@@ -96,9 +94,7 @@ The API will be available at `http://localhost:3000` by default.
       "message_count": 2,
       "first_message_timestamp": "2025-05-22T16:48:26.858Z",
       "last_message_timestamp": "2025-05-22T16:49:15.123Z",
-      "generated_at": "2025-05-22T16:51:00.000Z",
-      "session_id": 6762016005514153,
-      "awb_number": "016005514153"
+      "generated_at": "2025-05-22T16:51:00.000Z"
     }
   }
 }
@@ -110,11 +106,9 @@ The API will be available at `http://localhost:3000` by default.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| session_id | number | Yes | Unique identifier for the chat session |
 | timestamp | string | Yes | ISO 8601 timestamp of the message |
 | sender | string | Yes | Either "Bot" or "Customer" |
 | content | string | Yes | The message text content |
-| awb_number | string | No | Air Waybill number (optional) |
 | recipient_name | string | No | Name of the recipient (optional) |
 | recipient_phone | string | No | Phone number of the recipient (optional) |
 
@@ -125,6 +119,7 @@ The API will be available at `http://localhost:3000` by default.
 | width | number | 400 | Width of the output image (300-1200px) |
 | quality | string | "high" | Image quality ("low", "medium", or "high") |
 | format | string | "png" | Output format ("png", "jpeg", or "webp") |
+| headerDisplay | string | "phone" | Determines if the recipient's name or phone is shown in the chat header ("name" or "phone") |
 
 ## Development
 

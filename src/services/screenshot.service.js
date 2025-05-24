@@ -17,10 +17,10 @@ class ScreenshotService {
    */
   async generateWhatsAppScreenshot(messages, options = {}) {
     try {
-      const { width = 400, format = 'png', quality = 'high' } = options;
+      const { width = 400, format = 'png', quality = 'high', headerDisplay = 'phone' } = options;
       
       // Generate HTML content
-      const htmlContent = await this.generateChatHTML(messages, { width });
+      const htmlContent = await this.generateChatHTML(messages, { width, headerDisplay });
       
       // Launch browser
       const browser = await puppeteer.launch({
@@ -92,6 +92,7 @@ class ScreenshotService {
    */
   async generateChatHTML(messages, options = {}) {
     try {
+      const { width, headerDisplay } = options;
       // Read the template file
       const templatePath = path.join(__dirname, '../templates/whatsapp-chat.html');
       let template = await fs.readFile(templatePath, 'utf-8');
@@ -100,22 +101,27 @@ class ScreenshotService {
       const firstMessage = messages[0] || {};
       const recipientName = firstMessage.recipient_name || 'Customer';
       let recipientPhone = firstMessage.recipient_phone || 'Unknown';
+      let headerLineText;
 
-      // Format recipient phone number to add +62 prefix if it's not already there
-      if (!recipientPhone.startsWith('+62')) {
-        recipientPhone = `+62 ${recipientPhone}`;
+      if (headerDisplay === 'name') {
+        headerLineText = recipientName;
       } else {
-        // Add space after +62 if space is not already there
-        if (!recipientPhone.includes(' ')) {
-          recipientPhone = recipientPhone.replace('+62', '+62 ');
+        // Format recipient phone number to add +62 prefix if it's not already there
+        if (!recipientPhone.startsWith('+62')) {
+          recipientPhone = `+62 ${recipientPhone}`;
+        } else {
+          // Add space after +62 if space is not already there
+          if (!recipientPhone.includes(' ')) {
+            recipientPhone = recipientPhone.replace('+62', '+62 ');
+          }
         }
+        // Format to add dash after every 4 digits
+        recipientPhone = recipientPhone.replace(/(?=\d{4}(?:\d{4})*$)/g, '-');
+        headerLineText = recipientPhone;
       }
 
-      // Format to add dash after every 4 digits
-      recipientPhone = recipientPhone.replace(/(?=\d{4}(?:\d{4})*$)/g, '-');
-
-      const lastSeen = new Date().toLocaleTimeString('id-ID', { 
-        hour: '2-digit', 
+      const lastSeen = new Date().toLocaleTimeString('id-ID', {
+        hour: '2-digit',
         minute: '2-digit',
         hour12: true 
       });
@@ -148,10 +154,10 @@ class ScreenshotService {
       // Replace placeholders in the template
       return template
         .replace('{{recipientName}}', recipientName.charAt(0).toUpperCase())
-        .replace('{{recipientPhone}}', recipientPhone)
+        .replace('{{headerLineText}}', headerLineText)
         .replace('{{lastSeen}}', lastSeen)
         .replace('{{messages}}', messagesHTML)
-        .replace('{{width}}', options.width || '400px');
+        .replace('{{width}}', width || '400px');
     } catch (error) {
       console.error('Error generating chat HTML:', error);
       throw new ApiError(500, 'Failed to generate chat HTML');
