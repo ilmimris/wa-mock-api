@@ -27,7 +27,7 @@ class ScreenshotService {
         console.error('Failed to load HTML template:', error);
         // This is a critical error for the service's operation.
         // Rethrow to be caught by the constructor's catch or calling context.
-        throw error; 
+        throw error;
       }
     }
 
@@ -69,7 +69,7 @@ class ScreenshotService {
   async generateWhatsAppScreenshot(messages, options = {}) {
     try {
       const { width = 400, format = 'png', quality = 'high', headerDisplay = 'phone' } = options;
-      
+
       // Generate HTML content
       const htmlContent = await this.generateChatHTML(messages, { width, headerDisplay });
 
@@ -77,13 +77,13 @@ class ScreenshotService {
       if (!this.browser || !this.browser.isConnected()) {
         await this.initializeBrowser();
       }
-      
+
       const page = await this.browser.newPage();
-      
+
       // Set content first. For local content, 'domcontentloaded' is usually sufficient.
       // A minimal default viewport is active before this, which is fine for rendering.
       await page.setContent(htmlContent, { waitUntil: 'domcontentloaded' });
-      
+
       // Calculate the height of the content
       const bodyHandle = await page.$('body');
       if (!bodyHandle) {
@@ -98,7 +98,7 @@ class ScreenshotService {
         throw new ApiError(500, 'Failed to get bounding box for height calculation');
       }
       const contentHeight = Math.ceil(boundingBox.height);
-      
+
       // Set the viewport to the full height of the content and desired width
       await page.setViewport({
         width: parseInt(width, 10),
@@ -119,10 +119,10 @@ class ScreenshotService {
       }
 
       const screenshot = await page.screenshot(screenshotOptions);
-      
+
       // Do not close the browser here; it's reused.
       // await browser.close(); 
-      
+
       // Convert to base64
       const base64Image = screenshot.toString('base64');
       return `data:image/${format};base64,${base64Image}`;
@@ -138,7 +138,8 @@ class ScreenshotService {
    */
   async generateChatHTML(messages, options = {}) {
     try {
-     
+      const { width, headerDisplay } = options;
+      
       if (!this.chatTemplate) {
         // This case should ideally not be reached if initializeBrowser was successful.
         // However, as a fallback, or if generateChatHTML could be called before full initialization.
@@ -152,7 +153,7 @@ class ScreenshotService {
         }
       }
       let template = this.chatTemplate;
-      
+
       // Extract recipient info from the first message
       const firstMessage = messages[0] || {};
       const recipientName = firstMessage.recipient_name || 'Customer';
@@ -179,21 +180,21 @@ class ScreenshotService {
       const lastSeen = new Date().toLocaleTimeString('id-ID', {
         hour: '2-digit',
         minute: '2-digit',
-        hour12: true 
+        hour12: true
       });
-      
+
       // Generate messages HTML
       const messagesHTML = messages.map(msg => {
         const isBot = msg.sender === 'Bot';
-        const time = new Date(msg.timestamp).toLocaleTimeString('id-ID', { 
-          hour: '2-digit', 
+        const time = new Date(msg.timestamp).toLocaleTimeString('id-ID', {
+          hour: '2-digit',
           minute: '2-digit',
-          hour12: true 
+          hour12: true
         });
 
         // Format WhatsApp message formatting into html 
         const content = convertWhatsAppToHTML(msg.content);
-        
+
         return `
           <div class="message ${isBot ? 'sent' : 'received'}">
             <div class="message-content">
