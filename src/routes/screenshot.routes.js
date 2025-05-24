@@ -23,14 +23,10 @@ const { generateScreenshot } = require('../controllers/screenshot.controller');
  *                 items:
  *                   type: object
  *                   required:
- *                     - session_id
  *                     - timestamp
  *                     - sender
  *                     - content
  *                   properties:
- *                     session_id:
- *                       type: number
- *                       example: 6762016005514153
  *                     timestamp:
  *                       type: string
  *                       format: date-time
@@ -42,9 +38,6 @@ const { generateScreenshot } = require('../controllers/screenshot.controller');
  *                     content:
  *                       type: string
  *                       example: "Hello, how can I help you today?"
- *                     awb_number:
- *                       type: string
- *                       example: "016005514153"
  *                     recipient_name:
  *                       type: string
  *                       example: "John Doe"
@@ -60,6 +53,12 @@ const { generateScreenshot } = require('../controllers/screenshot.controller');
  *                     maximum: 1200
  *                     default: 400
  *                     example: 400
+ *                   headerDisplay:
+ *                     type: string
+ *                     enum: [name, phone]
+ *                     default: phone
+ *                     description: "Determines whether to display recipient's name or phone in the chat header."
+ *                     example: "name"
  *                   quality:
  *                     type: string
  *                     enum: [low, medium, high]
