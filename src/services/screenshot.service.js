@@ -37,8 +37,13 @@ class ScreenshotService {
     }
     console.log('Initializing browser...');
     try {
+      // Test Chrome executable first
+      const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium';
+      console.log('Using Chrome executable:', executablePath);
+
       this.browser = await puppeteer.launch({
         headless: 'new',
+        executablePath: executablePath,
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
