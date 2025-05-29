@@ -238,8 +238,119 @@
       </div>
     </div>
     <div class="chat-messages">
-      {{messages}}
+      {{range .Messages}}
+        <div class="{{messageClass .}}">
+          <div class="message-content">
+            {{if hasAuthor .}}
+              <p class="message-author">{{.Author}}</p>
+            {{end}}
+            <p class="message-text">{{.Content}}</p>
+            <div class="message-metadata">
+              <span class="message-time">{{formatTimestamp .Timestamp}}</span>
+              {{if and (eq .Author "") (not (isSystemMessage .)) }}
+                <span class="message-status"></span> <!-- Double tick for sent messages -->
+              {{end}}
+            </div>
+          </div>
+        </div>
+      {{else}}
+        <p>No messages in this chat.</p>
+      {{end}}
     </div>
   </div>
 </body>
 </html>
+<style>
+  .message-author {
+    font-weight: bold;
+    color: #075e54; /* Or any color that fits the theme */
+    margin-bottom: 3px;
+    font-size: 13px;
+  }
+
+  .message-text {
+    /* Ensure this is styled as needed, though .Content is HTML now */
+  }
+  
+  .message-metadata {
+    display: block; /* Ensure it takes its own line or adjust as needed */
+    margin-top: 4px; /* Add some space above metadata */
+    text-align: right; /* Align time and status to the right */
+    height: 15px; /* Fixed height to align content better */
+  }
+
+  .message-time {
+    float: none; /* Override existing float if any */
+    display: inline; /* Keep it inline */
+    /* bottom: 0; removed, as metadata div handles alignment */
+  }
+
+  .message.sent .message-time {
+    /* color: #4a7b3c; */ /* Already defined, but ensure it's what you want */
+  }
+  
+  .message-status {
+    /* vertical-align: bottom; */ /* Align with the bottom of the text */
+    /* top: 0; */ /* Adjust if needed */
+  }
+
+  /* Adjustments for system messages if any specific styling is needed beyond .system-message */
+  .system-message .message-content {
+    background-color: #f0f0f0; /* Example background */
+    text-align: center;
+    font-style: italic;
+    font-size: 12px;
+    padding: 5px 10px;
+    border-radius: 5px;
+    margin: 5px auto; /* Center system messages */
+    max-width: 80%;
+  }
+  
+  .system-message .message-content p {
+    margin: 0;
+  }
+  
+  .system-message .message-metadata { /* Hide metadata for system messages */
+    display: none;
+  }
+
+  /* Media message specific styling */
+  .image-message .message-text img,
+  .sticker-message .message-text img {
+    max-width: 100%;
+    border-radius: 5px;
+    display: block; /* Ensure images are block elements */
+  }
+  
+  .video-message .message-text video {
+     max-width: 100%;
+     border-radius: 5px;
+     display: block; /* Ensure videos are block elements */
+  }
+
+  .audio-message .message-text audio {
+    width: 100%;
+    display: block; /* Ensure audio players are block elements */
+  }
+  
+  .document-message .message-text,
+  .contact-message .message-text {
+    padding: 10px;
+    background-color: #f5f5f5; /* Slightly different background for file/contact messages */
+    border-radius: 5px;
+    display: flex; /* For icon and text alignment */
+    align-items: center;
+  }
+  
+  .document-message .media-icon,
+  .contact-message .media-icon {
+    margin-right: 8px;
+    /* Add styles for actual icons here */
+  }
+  
+  .file-info {
+    font-size: 12px;
+    color: #555;
+  }
+
+</style>
