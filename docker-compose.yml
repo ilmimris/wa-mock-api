@@ -10,7 +10,6 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
     volumes:
       - ./logs:/usr/src/app/logs
     healthcheck:
