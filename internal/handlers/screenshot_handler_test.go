@@ -25,7 +25,7 @@ type ErrorResponse struct {
 }
 
 // --- Test Setup and Teardown ---
-var dummyTemplateDir string // Stores path of the "templates" directory created for tests
+var dummyTemplateDir string   // Stores path of the "templates" directory created for tests
 var originalWorkingDir string // Stores the original working directory
 
 // TestMain sets up and tears down the test environment.
@@ -50,7 +50,6 @@ func TestMain(m *testing.M) {
 		// For now, assume setupDummyTemplate handles pathing correctly or fails informatively.
 		// If tests are run from the package dir, this should be fine.
 	}
-
 
 	// Run tests
 	code := m.Run()
@@ -87,15 +86,14 @@ func cleanupDummyTemplate(baseDir string) {
 	}
 }
 
-
 // TestScreenshotHandler_ValidRequest_ErrorPath simulates a valid request
 // but expects an error because downstream services (HTML generation or screenshotting)
 // are real and will likely fail in a limited test environment (e.g., no browser).
 func TestScreenshotHandler_ValidRequest_ErrorPath(t *testing.T) {
 	reqBody := ScreenshotRequest{
-		ChatName: "Test Chat Service Error",
-		LastSeen: "yesterday",
-		Messages: []RequestMessage{{Sender: "Alice", Content: "Hello", Timestamp: "10:00"}},
+		ChatName:          "Test Chat Service Error",
+		LastSeen:          "yesterday",
+		Messages:          []RequestMessage{{Sender: "Alice", Content: "Hello", Timestamp: "10:00"}},
 		ScreenshotOptions: &services.ScreenshotOptions{Width: 300}, // Ensure width is set for html_generator
 	}
 	jsonBody, _ := json.Marshal(reqBody)
@@ -227,30 +225,31 @@ func TestScreenshotHandler_FilenameLogic(t *testing.T) {
 // This ensures `mime` and `utils` are marked as used if no other test uses them explicitly.
 var _ = mime.ParseMediaType
 var _ = utils.RawChatData{}
-```
-The tests for `internal/handlers/screenshot_handler_test.go` have been created and refined.
 
-Summary of the handler tests:
--   **Test Setup (`TestMain`, `setupDummyTemplate`, `cleanupDummyTemplate`)**:
-    -   `TestMain` correctly captures the original working directory and uses it as a base for creating the dummy `templates` directory. This makes the template path resolution more reliable regardless of where `go test` is executed from (e.g., package directory or project root).
-    -   The dummy `templates/whatsapp-chat.html` file is created before tests run and cleaned up afterwards. This is crucial because `ScreenshotHandler` relies on `utils.GenerateHTML` which in turn uses this hardcoded path.
--   **`TestScreenshotHandler_ValidRequest_ErrorPath`**:
-    -   Submits a valid JSON request.
-    -   Asserts that the handler returns `http.StatusInternalServerError`. This is the expected behavior because the real downstream services (`utils.GenerateHTML` or `services.TakeScreenshotFromHTML`) are called and will fail in a typical unit test environment (e.g., `TakeScreenshotFromHTML` requires a browser).
-    -   It further checks if the error message in the response body indicates a failure from either HTML generation or the screenshot service, confirming the request was processed up to the point of external service integration.
--   **`TestScreenshotHandler_InvalidJSON`**:
-    -   Sends a malformed JSON in the request body.
-    -   Verifies that the handler responds with `http.StatusBadRequest`.
-    -   Checks that the JSON error response contains a message indicating an "Invalid JSON payload".
--   **`TestScreenshotHandler_UnsupportedMethod`**:
-    -   Makes a GET request to the `/screenshot` endpoint.
-    -   Ensures the handler returns `http.StatusMethodNotAllowed`.
-    -   Verifies the response body contains the message "Only POST requests are allowed".
--   **`TestScreenshotHandler_FilenameLogic`**:
-    -   This test iterates through various scenarios for `OutputFileName` and `ScreenshotOptions.Format`.
-    -   It primarily serves to document the intended logic for setting `Content-Disposition` and `Content-Type` headers.
-    -   Due to the lack of Dependency Injection (DI) for the downstream services, this test also expects an `http.StatusInternalServerError`. The test log acknowledges that if DI and mocks were in place, it would assert the actual header values. The current structure of `ScreenshotHandler` writes headers only after a successful screenshot, so these headers cannot be checked when an error occurs in the service calls.
+// ```
+// The tests for `internal/handlers/screenshot_handler_test.go` have been created and refined.
+//
+// Summary of the handler tests:
+// -   **Test Setup (`TestMain`, `setupDummyTemplate`, `cleanupDummyTemplate`)**:
+//     -   `TestMain` correctly captures the original working directory and uses it as a base for creating the dummy `templates` directory. This makes the template path resolution more reliable regardless of where `go test` is executed from (e.g., package directory or project root).
+//     -   The dummy `templates/whatsapp-chat.html` file is created before tests run and cleaned up afterwards. This is crucial because `ScreenshotHandler` relies on `utils.GenerateHTML` which in turn uses this hardcoded path.
+// -   **`TestScreenshotHandler_ValidRequest_ErrorPath`**:
+//     -   Submits a valid JSON request.
+//     -   Asserts that the handler returns `http.StatusInternalServerError`. This is the expected behavior because the real downstream services (`utils.GenerateHTML` or `services.TakeScreenshotFromHTML`) are called and will fail in a typical unit test environment (e.g., `TakeScreenshotFromHTML` requires a browser).
+//     -   It further checks if the error message in the response body indicates a failure from either HTML generation or the screenshot service, confirming the request was processed up to the point of external service integration.
+// -   **`TestScreenshotHandler_InvalidJSON`**:
+//     -   Sends a malformed JSON in the request body.
+//     -   Verifies that the handler responds with `http.StatusBadRequest`.
+//     -   Checks that the JSON error response contains a message indicating an "Invalid JSON payload".
+// -   **`TestScreenshotHandler_UnsupportedMethod`**:
+//     -   Makes a GET request to the `/screenshot` endpoint.
+//     -   Ensures the handler returns `http.StatusMethodNotAllowed`.
+//     -   Verifies the response body contains the message "Only POST requests are allowed".
+// -   **`TestScreenshotHandler_FilenameLogic`**:
+//     -   This test iterates through various scenarios for `OutputFileName` and `ScreenshotOptions.Format`.
+//     -   It primarily serves to document the intended logic for setting `Content-Disposition` and `Content-Type` headers.
+//     -   Due to the lack of Dependency Injection (DI) for the downstream services, this test also expects an `http.StatusInternalServerError`. The test log acknowledges that if DI and mocks were in place, it would assert the actual header values. The current structure of `ScreenshotHandler` writes headers only after a successful screenshot, so these headers cannot be checked when an error occurs in the service calls.
 
-The tests provide good coverage for the handler's request parsing, input validation, method enforcement, and error handling paths. They also highlight the importance of DI for fully testing the success paths involving external dependencies.
+// The tests provide good coverage for the handler's request parsing, input validation, method enforcement, and error handling paths. They also highlight the importance of DI for fully testing the success paths involving external dependencies.
 
-All specified unit tests have been created.
+// All specified unit tests have been created.

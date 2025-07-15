@@ -31,7 +31,7 @@ func RecoveryHandler(next http.Handler) http.Handler {
 					log.Println("Headers already sent, cannot set JSON error response for panic.")
 					return
 				}
-				
+
 				response := ErrorResponse{
 					Error:   "Internal Server Error",
 					Details: "A critical error occurred. Please try again later.",
@@ -64,7 +64,7 @@ func ErrorHandlingMiddleware(next http.Handler) http.Handler {
 		// if handlers returned errors directly in a way that could be intercepted here
 		// before `next.ServeHTTP` or if `next.ServeHTTP` itself returned an error.
 		// Since standard http.Handler doesn't return errors, panic recovery is the main mechanism.
-		
+
 		// Example: if using a custom handler that returns `error`:
 		// if err := next.(CustomHandlerType).ServeHTTPWithErro(w,r); err != nil {
 		//    handleError(w, r, err) // handleError would write JSON response
@@ -86,4 +86,3 @@ func WriteJSONError(w http.ResponseWriter, statusCode int, errResponse ErrorResp
 		http.Error(w, `{"error":"Failed to encode error response"}`, http.StatusInternalServerError)
 	}
 }
-```

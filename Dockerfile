@@ -1,5 +1,5 @@
 # Stage 1: Build the Go application
-FROM golang:1.21-bookworm AS builder
+FROM golang:1.23-bookworm AS builder
 
 # Install system dependencies for chromedp (Chromium)
 # Based on https://github.com/chromedp/chromedp/issues/1003#issuecomment-1071831884

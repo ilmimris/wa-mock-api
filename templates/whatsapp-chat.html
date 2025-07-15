@@ -17,7 +17,7 @@
       background-color: #e5ddd5;
       margin: 0;
       padding: 0;
-      width: {{width}}px;
+      width: {{.Width}}px;
       min-height: 100vh;
       margin: 0 auto;
     }
@@ -233,8 +233,8 @@
         </svg>
       </div>
       <div class="chat-info">
-        <h2>{{headerLineText}}</h2>
-        <p>last seen today at {{lastSeen}}</p>
+        <h2>{{.HeaderLineText}}</h2>
+        <p>last seen today at {{.LastSeen}}</p>
       </div>
     </div>
     <div class="chat-messages">

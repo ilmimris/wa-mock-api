@@ -1,6 +1,6 @@
 #!/bin/bash
 
-curl --location 'http://localhost:3000/api/whatsapp-screenshot' \
+curl --location 'http://localhost:8080/screenshot' \
 --header 'Content-Type: application/json' \
 --data '{
     "messages": [
@@ -65,3 +65,11 @@ curl --location 'http://localhost:3000/api/whatsapp-screenshot' \
         "headerDisplay": "name"
     }
 }'
+--output screenshot.png
+
+# Check if the curl command was successful
+if [ $? -eq 0 ]; then
+    echo "Screenshot saved as screenshot.png"
+else
+    echo "Failed to take screenshot"
+fi

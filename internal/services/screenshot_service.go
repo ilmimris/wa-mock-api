@@ -13,16 +13,16 @@ import (
 
 // DefaultSelector is the CSS selector for the main chat container.
 const DefaultSelector = ".chat-container" // Matches the class in the HTML template
-const defaultTimeout = 30 * time.Second // Default timeout for screenshot operations
+const defaultTimeout = 30 * time.Second   // Default timeout for screenshot operations
 
 // ScreenshotOptions defines configuration for taking a screenshot.
 type ScreenshotOptions struct {
-	Width      int    // Viewport width
-	Height     int    // Viewport height (less relevant for full page or specific element if it dictates size)
-	Selector   string // CSS selector for the element to capture. If empty and not IsFullPage, captures viewport.
-	Quality    int    // JPEG quality (1-100). Only used if Format is "jpeg" and IsFullPage is true.
-	Format     string // "jpeg" or "png". Currently, only FullScreenshot explicitly supports JPEG via quality. Others default to PNG.
-	IsFullPage bool   // Whether to capture the full scrollable page.
+	Width      int           // Viewport width
+	Height     int           // Viewport height (less relevant for full page or specific element if it dictates size)
+	Selector   string        // CSS selector for the element to capture. If empty and not IsFullPage, captures viewport.
+	Quality    int           // JPEG quality (1-100). Only used if Format is "jpeg" and IsFullPage is true.
+	Format     string        // "jpeg" or "png". Currently, only FullScreenshot explicitly supports JPEG via quality. Others default to PNG.
+	IsFullPage bool          // Whether to capture the full scrollable page.
 	Timeout    time.Duration // Optional timeout for the operation. Defaults to `defaultTimeout`.
 }
 
@@ -49,26 +49,25 @@ func TakeScreenshotFromHTML(htmlContent string, options ScreenshotOptions) ([]by
 	if options.Quality == 0 && strings.ToLower(options.Format) == "jpeg" {
 		options.Quality = 90 // Default JPEG quality
 	} else if options.Quality < 1 || options.Quality > 100 {
-        if strings.ToLower(options.Format) == "jpeg" { // Only apply quality clamping for JPEG
-            log.Printf("Warning: Quality %d is out of range (1-100). Using default 90 for JPEG.", options.Quality)
-            options.Quality = 90
-        }
-    }
+		if strings.ToLower(options.Format) == "jpeg" { // Only apply quality clamping for JPEG
+			log.Printf("Warning: Quality %d is out of range (1-100). Using default 90 for JPEG.", options.Quality)
+			options.Quality = 90
+		}
+	}
 
-
-    currentTimeout := options.Timeout
-    if currentTimeout == 0 {
-        currentTimeout = defaultTimeout
-    }
+	currentTimeout := options.Timeout
+	if currentTimeout == 0 {
+		currentTimeout = defaultTimeout
+	}
 
 	// Create allocator options
 	allocOpts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", true),
 		chromedp.Flag("disable-gpu", true),
-		chromedp.Flag("no-sandbox", true),        // Often required in containerized environments
+		chromedp.Flag("no-sandbox", true),            // Often required in containerized environments
 		chromedp.Flag("disable-dev-shm-usage", true), // Also common in containers
-		chromedp.Flag("enable-logging", "stderr"), // Enable browser logging
-		chromedp.Flag("v", "1"),                   // Verbosity level for browser logs
+		chromedp.Flag("enable-logging", "stderr"),    // Enable browser logging
+		chromedp.Flag("v", "1"),                      // Verbosity level for browser logs
 	)
 
 	allocCtx, cancelAlloc := chromedp.NewExecAllocator(context.Background(), allocOpts...)
@@ -78,7 +77,7 @@ func TakeScreenshotFromHTML(htmlContent string, options ScreenshotOptions) ([]by
 	// Add listener for console logs from the browser
 	browserCtx, cancelBrowser := chromedp.NewContext(allocCtx, chromedp.WithLogf(log.Printf), chromedp.WithDebugf(log.Printf), chromedp.WithErrorf(log.Printf))
 	defer cancelBrowser()
-	
+
 	// Create a timeout context for the entire operation
 	ctx, cancelOperation := context.WithTimeout(browserCtx, currentTimeout)
 	defer cancelOperation()
@@ -118,10 +117,11 @@ func TakeScreenshotFromHTML(htmlContent string, options ScreenshotOptions) ([]by
 		log.Printf("Capturing element screenshot (selector: '%s', format: png)", options.Selector)
 		// chromedp.Screenshot captures the element as PNG.
 		// Wait for the element to be visible and then capture.
-		tasks = append(tasks, chromedp.WaitVisible(options.Selector, chromedp.ByQuery, chromedp.After(func(ctx context.Context, ev interface{}) error {
+		tasks = append(tasks, chromedp.WaitVisible(options.Selector, chromedp.ByQuery))
+		tasks = append(tasks, chromedp.ActionFunc(func(ctx context.Context) error {
 			log.Printf("Element '%s' is visible.", options.Selector)
 			return nil
-		})))
+		}))
 		tasks = append(tasks, chromedp.Screenshot(options.Selector, &buf, chromedp.ByQuery))
 		finalFormat = "png"
 	} else { // Fallback: capture viewport
@@ -167,4 +167,3 @@ func TakeScreenshotFromHTML(htmlContent string, options ScreenshotOptions) ([]by
 // This is currently not implemented for element/viewport to keep it simpler for this iteration.
 // The `chromedp.FullScreenshot` handles JPEG quality directly.
 // The `chromedp.Screenshot` (element) and `chromedp.CaptureScreenshot` (viewport) output PNG by default with simple usage.
-```

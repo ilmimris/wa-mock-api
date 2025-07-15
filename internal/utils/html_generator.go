@@ -5,9 +5,6 @@ import (
 	"html/template"
 	"io/ioutil"
 	"log"
-	"html/template"
-	"io/ioutil"
-	"log"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -30,11 +27,11 @@ type Message struct {
 
 // ChatData represents the overall chat data for the template.
 type ChatData struct {
-	ChatName     string    `json:"chatName"` // Retained for potential use, maps to HeaderLineText
-	Messages     []Message `json:"messages"`
-	Width        int       `json:"width"`         // For body style
-	HeaderLineText string  `json:"headerLineText"`// For chat header
-	LastSeen     string    `json:"lastSeen"`      // For chat header
+	ChatName       string    `json:"chatName"` // Retained for potential use, maps to HeaderLineText
+	Messages       []Message `json:"messages"`
+	Width          int       `json:"width"`          // For body style
+	HeaderLineText string    `json:"headerLineText"` // For chat header
+	LastSeen       string    `json:"lastSeen"`       // For chat header
 }
 
 // RawMessage is used for decoding the input JSON where content is still a string.
@@ -51,11 +48,11 @@ type RawMessage struct {
 
 // RawChatData is used for decoding the input JSON.
 type RawChatData struct {
-	ChatName     string       `json:"chatName"`
-	Messages     []RawMessage `json:"messages"`
-	Width        int          `json:"width"`
-	HeaderLineText string     `json:"headerLineText"`
-	LastSeen     string       `json:"lastSeen"`
+	ChatName       string       `json:"chatName"`
+	Messages       []RawMessage `json:"messages"`
+	Width          int          `json:"width"`
+	HeaderLineText string       `json:"headerLineText"`
+	LastSeen       string       `json:"lastSeen"`
 }
 
 // formatContentHTML converts WhatsApp style text to HTML.
@@ -71,20 +68,20 @@ func formatContentHTML(text string) template.HTML {
 
 	// 2. Apply formatting
 	// Bold: *text*
-	reBold := regexp.MustCompile(`(?<!\w)\*([^\s*][^*]*[^\s*]|\S)\*(?!\w)`)
-	html := reBold.ReplaceAllString(escapedText, "<strong>$1</strong>")
+	reBold := regexp.MustCompile(`(^|[^\w])\*([^\s*][^*]*[^\s*]|\S)\*([^\w]|$)`)
+	html := reBold.ReplaceAllString(escapedText, "$1<strong>$2</strong>$3")
 
 	// Italic: _text_
-	reItalic := regexp.MustCompile(`(?<!\w)_([^\s_][^_]*[^\s_]|\S)_(?!\w)`)
-	html = reItalic.ReplaceAllString(html, "<em>$1</em>")
+	reItalic := regexp.MustCompile(`(^|[^\w])_([^\s_][^_]*[^\s_]|\S)_([^\w]|$)`)
+	html = reItalic.ReplaceAllString(html, "$1<em>$2</em>$3")
 
 	// Monospace: ```text```
 	reMonospace := regexp.MustCompile("```([^`]+)```")
 	html = reMonospace.ReplaceAllString(html, "<code>$1</code>")
 
 	// Strikethrough: ~text~
-	reStrikethrough := regexp.MustCompile(`(?<!\w)~([^\s~][^~]*[^\s~]|\S)~(?!\w)`)
-	html = reStrikethrough.ReplaceAllString(html, "<del>$1</del>")
+	reStrikethrough := regexp.MustCompile(`(^|[^\w])~([^\s~][^~]*[^\s~]|\S)~([^\w]|$)`)
+	html = reStrikethrough.ReplaceAllString(html, "$1<del>$2</del>$3")
 
 	// Line breaks
 	html = strings.ReplaceAll(html, "\n", "<br>")
@@ -109,14 +106,13 @@ func ProcessChatData(rawData RawChatData) ChatData {
 		}
 	}
 	return ChatData{
-		ChatName:     rawData.ChatName, // Or rawData.HeaderLineText if that's the primary source
-		Messages:     processedMessages,
-		Width:        rawData.Width,
+		ChatName:       rawData.ChatName, // Or rawData.HeaderLineText if that's the primary source
+		Messages:       processedMessages,
+		Width:          rawData.Width,
 		HeaderLineText: rawData.HeaderLineText,
-		LastSeen:     rawData.LastSeen,
+		LastSeen:       rawData.LastSeen,
 	}
 }
-
 
 // GenerateHTML generates HTML from processed chat data using a template.
 func GenerateHTML(processedData ChatData, templatePath string) (string, error) {
@@ -146,7 +142,7 @@ func GenerateHTML(processedData ChatData, templatePath string) (string, error) {
 		"isAudio":         func(m Message) bool { return m.Type == "audio" },
 		"isSticker":       func(m Message) bool { return m.Type == "sticker" },
 		"isContact":       func(m Message) bool { return m.Type == "contact" },
-		"isDocument":      func(m Message) bool { return m.Type == "document"},
+		"isDocument":      func(m Message) bool { return m.Type == "document" },
 		"hasAuthor":       func(m Message) bool { return m.Author != "" && m.Type == "message" },
 		"messageClass":    messageClass,
 		"mediaIconClass":  mediaIconClass,
@@ -171,10 +167,11 @@ func formatTimestamp(timestamp string) string {
 		return timestamp // Already HH:MM
 	}
 	layouts := []string{
-		time.RFC3339,          // "2006-01-02T15:04:05Z07:00"
-		"2/1/2006, 15:04",     // "D/M/YYYY, HH:MM"
-		"1/2/2006, 15:04",     // "M/D/YYYY, HH:MM"
-		"2006-01-02 15:04:05", // Common SQL timestamp
+		time.RFC3339,              // "2006-01-02T15:04:05Z07:00"
+		"2/1/2006, 15:04",         // "D/M/YYYY, HH:MM"
+		"1/2/2006, 15:04",         // "M/D/YYYY, HH:MM"
+		"2006-01-02 15:04:05",     // Common SQL timestamp
+		"2006-01-02T15:04:05.000", // Timestamp with milliseconds
 	}
 	for _, layout := range layouts {
 		t, err := time.Parse(layout, timestamp)
@@ -201,52 +198,50 @@ func isTextMessage(msg Message) bool {
 	return msg.Type == "message" && msg.MediaURL == "" && msg.FileName == "" && !isMediaMessage(msg)
 }
 
-
 func messageClass(msg Message) string {
-    baseClass := "message"
-    // Determine if the message is sent or received.
-    // The original template CSS implies "sent" messages don't explicitly show author in the bubble,
-    // but are right-aligned. "received" messages are left-aligned and may show author.
-    // Let's assume: if Author is empty OR Author is a special value indicating "self", it's sent.
-    // This logic might need adjustment based on actual data.
-    // For now, if Author is empty, it's 'sent'. If Author is present, it's 'received'.
-    // System messages are distinct.
-    if msg.Type == "system" {
-        return "message system-message"
-    }
+	baseClass := "message"
+	// Determine if the message is sent or received.
+	// The original template CSS implies "sent" messages don't explicitly show author in the bubble,
+	// but are right-aligned. "received" messages are left-aligned and may show author.
+	// Let's assume: if Author is empty OR Author is a special value indicating "self", it's sent.
+	// This logic might need adjustment based on actual data.
+	// For now, if Author is empty, it's 'sent'. If Author is present, it's 'received'.
+	// System messages are distinct.
+	if msg.Type == "system" {
+		return "message system-message"
+	}
 
-    if msg.Author == "" { // Assuming no author means it's a "sent" message by the user
-        baseClass += " sent"
-    } else {
-        baseClass += " received"
-    }
+	if msg.Author == "" { // Assuming no author means it's a "sent" message by the user
+		baseClass += " sent"
+	} else {
+		baseClass += " received"
+	}
 
-    // Append type-specific classes
-    if msg.Type == "image" {
-        return baseClass + " image-message"
-    }
-    if msg.Type == "video" {
-        return baseClass + " video-message"
-    }
-    if msg.Type == "audio" {
-        return baseClass + " audio-message"
-    }
-    if msg.Type == "sticker" {
-        return baseClass + " sticker-message"
-    }
-    if msg.Type == "contact" {
-        return baseClass + " contact-message"
-    }
-    if msg.Type == "document" {
-        return baseClass + " document-message"
-    }
-    // If it's a plain text message (type "message" without specific media)
-    if msg.Type == "message" && !isMediaMessage(msg) {
-         // no special class other than .message .sent or .message .received
-    }
-    return baseClass
+	// Append type-specific classes
+	if msg.Type == "image" {
+		return baseClass + " image-message"
+	}
+	if msg.Type == "video" {
+		return baseClass + " video-message"
+	}
+	if msg.Type == "audio" {
+		return baseClass + " audio-message"
+	}
+	if msg.Type == "sticker" {
+		return baseClass + " sticker-message"
+	}
+	if msg.Type == "contact" {
+		return baseClass + " contact-message"
+	}
+	if msg.Type == "document" {
+		return baseClass + " document-message"
+	}
+	// If it's a plain text message (type "message" without specific media)
+	if msg.Type == "message" && !isMediaMessage(msg) {
+		// no special class other than .message .sent or .message .received
+	}
+	return baseClass
 }
-
 
 func mediaIconClass(msg Message) string {
 	// These are just placeholder class names. Actual icons would need CSS/SVGs.

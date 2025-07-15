@@ -30,7 +30,7 @@ func main() {
 	})
 
 	log.Printf("Server starting on port %s\n", port)
-	
+
 	// Use the mux with http.ListenAndServe
 	if err := http.ListenAndServe(":"+port, mux); err != nil {
 		log.Fatalf("Error starting server: %s\n", err)
@@ -48,4 +48,3 @@ func main() {
 // 	// Dummy success message
 // 	fmt.Fprintf(w, "Screenshot request received")
 // }
-}

@@ -14,28 +14,27 @@ import (
 
 // ScreenshotRequest defines the structure for the JSON request body.
 type ScreenshotRequest struct {
-	Messages         []RequestMessage                `json:"messages"`
-	ChatName         string                          `json:"chatName"` // Used as HeaderLineText
-	LastSeen         string                          `json:"lastSeen"`
-	OutputFileName   string                          `json:"outputFileName"` // Optional: for Content-Disposition
-	ScreenshotOptions *services.ScreenshotOptions    `json:"screenshotOptions"` // Optional: to override defaults
+	Messages          []RequestMessage            `json:"messages"`
+	ChatName          string                      `json:"chatName"` // Used as HeaderLineText
+	LastSeen          string                      `json:"lastSeen"`
+	OutputFileName    string                      `json:"outputFileName"`    // Optional: for Content-Disposition
+	ScreenshotOptions *services.ScreenshotOptions `json:"screenshotOptions"` // Optional: to override defaults
 }
 
 // RequestMessage is a simplified message structure from the input JSON.
 // We will map this to utils.Message.
 type RequestMessage struct {
-	SessionID       json.Number `json:"session_id,omitempty"` // Using json.Number for flexibility
-	Timestamp       string      `json:"timestamp"`
-	Sender          string      `json:"sender"` // Maps to Author in utils.Message
-	Content         string      `json:"content"`
-	AWBNumber       string      `json:"awb_number,omitempty"`
-	RecipientName   string      `json:"recipient_name,omitempty"`
-	RecipientPhone  string      `json:"recipient_phone,omitempty"`
+	SessionID      json.Number `json:"session_id,omitempty"` // Using json.Number for flexibility
+	Timestamp      string      `json:"timestamp"`
+	Sender         string      `json:"sender"` // Maps to Author in utils.Message
+	Content        string      `json:"content"`
+	AWBNumber      string      `json:"awb_number,omitempty"`
+	RecipientName  string      `json:"recipient_name,omitempty"`
+	RecipientPhone string      `json:"recipient_phone,omitempty"`
 	// We can add a Type field here if the client can specify it,
 	// otherwise, we'll infer or default it. For now, assume "message" type.
 	// ID can be generated if not provided.
 }
-
 
 // ScreenshotHandler handles requests to generate a screenshot of a chat.
 func ScreenshotHandler(w http.ResponseWriter, r *http.Request) {
@@ -54,10 +53,10 @@ func ScreenshotHandler(w http.ResponseWriter, r *http.Request) {
 
 	// --- Prepare ChatData for HTML generation ---
 	rawChatData := utils.RawChatData{
-		ChatName:     req.ChatName, // Will be used as HeaderLineText in the template
+		ChatName:       req.ChatName, // Will be used as HeaderLineText in the template
 		HeaderLineText: req.ChatName,
-		LastSeen:     req.LastSeen,
-		Messages:     make([]utils.RawMessage, len(req.Messages)),
+		LastSeen:       req.LastSeen,
+		Messages:       make([]utils.RawMessage, len(req.Messages)),
 		// Width can be set from screenshot options or a default
 	}
 
@@ -79,18 +78,18 @@ func ScreenshotHandler(w http.ResponseWriter, r *http.Request) {
 			Type:      "message", // Default to "message". Could be enhanced if client sends type.
 		}
 	}
-	
+
 	// --- Apply Screenshot Options ---
 	// Use provided options or defaults.
 	// The HTML template has a {{width}} placeholder for the body.
 	// This should ideally come from screenshot options if available.
 	activeScreenshotOptions := services.ScreenshotOptions{
-		Width:      1280, // Default width
-		Height:     720,  // Default height (less critical if selector/fullpage is used)
+		Width:      1280,                     // Default width
+		Height:     720,                      // Default height (less critical if selector/fullpage is used)
 		Selector:   services.DefaultSelector, // Default selector
-		IsFullPage: false, // Default: capture selector, not full page
-		Format:     "png", // Default format
-		Quality:    90,    // Default JPEG quality
+		IsFullPage: false,                    // Default: capture selector, not full page
+		Format:     "png",                    // Default format
+		Quality:    90,                       // Default JPEG quality
 		Timeout:    30 * time.Second,
 	}
 
@@ -111,14 +110,13 @@ func ScreenshotHandler(w http.ResponseWriter, r *http.Request) {
 		if req.ScreenshotOptions.Quality > 0 && activeScreenshotOptions.Format == "jpeg" {
 			activeScreenshotOptions.Quality = req.ScreenshotOptions.Quality
 		}
-        if req.ScreenshotOptions.Timeout > 0 {
-            activeScreenshotOptions.Timeout = req.ScreenshotOptions.Timeout
-        }
+		if req.ScreenshotOptions.Timeout > 0 {
+			activeScreenshotOptions.Timeout = req.ScreenshotOptions.Timeout
+		}
 	}
-	
+
 	// Set the width for the HTML template from the screenshot options
 	rawChatData.Width = activeScreenshotOptions.Width
-
 
 	// Process raw chat data to format messages (bold, italics, etc.)
 	processedChatData := utils.ProcessChatData(rawChatData)
@@ -157,10 +155,9 @@ func ScreenshotHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", safeFileName))
 	} else {
-        defaultFilename := "whatsapp-chat-screenshot." + activeScreenshotOptions.Format
-        w.Header().Set("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", defaultFilename))
-    }
-
+		defaultFilename := "whatsapp-chat-screenshot." + activeScreenshotOptions.Format
+		w.Header().Set("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", defaultFilename))
+	}
 
 	if _, err := w.Write(screenshotBytes); err != nil {
 		log.Printf("Error writing screenshot to response: %v", err)
@@ -168,4 +165,3 @@ func ScreenshotHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Println("Screenshot request processed successfully.")
 }
-```
