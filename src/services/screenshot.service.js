@@ -1,6 +1,6 @@
 const path = require('path');
 const fs = require('fs/promises');
-const { toPng } = require('html-to-image');
+const nodeHtmlToImage = require('node-html-to-image');
 const { ApiError } = require('../middleware/error.middleware');
 const { convertWhatsAppToHTML } = require('../utils/whatsapp-html');
 
@@ -39,10 +39,24 @@ class ScreenshotService {
       // Generate HTML content
       const htmlContent = await this.generateChatHTML(messages, { width, headerDisplay });
 
-      // Create a dummy element to render the HTML
-      const dataUrl = await toPng(htmlContent, { width, height: 10, skipAutoScale: true });
+      const image = await nodeHtmlToImage({
+        html: htmlContent,
+        puppeteerArgs: {
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--single-process',
+            '--disable-gpu'
+          ],
+        },
+        type: format,
+      });
 
-      return dataUrl;
+      return `data:image/${format};base64,${image.toString('base64')}`;
 
     } catch (error) {
       console.error('Error generating screenshot:', error);
