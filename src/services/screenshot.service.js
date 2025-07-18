@@ -144,7 +144,7 @@ class ScreenshotService {
   async generateChatHTML(messages, options = {}) {
     try {
       const { width, headerDisplay } = options;
-      
+
       if (!this.chatTemplate) {
         // This case should ideally not be reached if initializeBrowser was successful.
         // However, as a fallback, or if generateChatHTML could be called before full initialization.
@@ -170,7 +170,11 @@ class ScreenshotService {
       } else {
         // Format recipient phone number to add +62 prefix if it's not already there
         if (!recipientPhone.startsWith('+62')) {
-          recipientPhone = `+62 ${recipientPhone}`;
+          if (!recipientPhone.startsWith('62')) {
+            recipientPhone = `+62 ${recipientPhone}`;
+          } else {
+            recipientPhone = `+62 ${recipientPhone.slice(2)}`;
+          }
         } else {
           // Add space after +62 if space is not already there
           if (!recipientPhone.includes(' ')) {
@@ -183,6 +187,7 @@ class ScreenshotService {
       }
 
       const lastSeen = new Date().toLocaleTimeString('id-ID', {
+        timeZone: "Asia/Jakarta",
         hour: '2-digit',
         minute: '2-digit',
         hour12: true
@@ -192,6 +197,7 @@ class ScreenshotService {
       const messagesHTML = messages.map(msg => {
         const isBot = msg.sender === 'Bot';
         const time = new Date(msg.timestamp).toLocaleTimeString('id-ID', {
+          // msg.timestamp is already in Asia/Jakarta
           hour: '2-digit',
           minute: '2-digit',
           hour12: true
