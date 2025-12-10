@@ -67,7 +67,7 @@ Content-Type: application/json
 - Alternative: Python with Flask/FastAPI
 
 **3.2 Image Generation**
-- Puppeteer (headless Chrome) for screenshot generation
+- wkhtmltopdf (wkhtmltoimage) for screenshot generation
 - Sharp library for image optimization
 - Canvas API for direct rendering (alternative)
 
@@ -87,7 +87,7 @@ Content-Type: application/json
 ```json
 {
   "express": "^4.18.0",
-  "puppeteer": "^21.0.0",
+  "wkhtmltoimage": "^0.1.5",
   "sharp": "^0.32.0",
   "joi": "^17.9.0",
   "helmet": "^7.0.0",
@@ -122,41 +122,32 @@ whatsapp-api/
 
 ```javascript
 // screenshot.service.js
-const puppeteer = require('puppeteer');
+const wkhtmltoimage = require('wkhtmltoimage');
 const sharp = require('sharp');
 
 class ScreenshotService {
   async generateWhatsAppScreenshot(messages, options = {}) {
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
-    
-    const page = await browser.newPage();
-    
-    // Set viewport to mobile size
-    await page.setViewport({
-      width: options.width || 400,
-      height: 800,
-      deviceScaleFactor: 2
-    });
-    
-    // Generate HTML content
+     // Generate HTML content
     const htmlContent = this.generateChatHTML(messages);
-    await page.setContent(htmlContent);
     
-    // Take screenshot
-    const screenshot = await page.screenshot({
-      type: options.format || 'png',
-      quality: options.format === 'jpeg' ? 90 : undefined,
-      fullPage: true
+    const screenshotOptions = {
+        width: options.width || 400,
+        format: options.format || 'png',
+        quality: options.format === 'jpeg' ? 90 : undefined
+    };
+
+    return new Promise((resolve, reject) => {
+        const stream = wkhtmltoimage.generate(htmlContent, screenshotOptions);
+
+        const chunks = [];
+        stream.on('data', (chunk) => chunks.push(chunk));
+        stream.on('end', () => {
+          const buffer = Buffer.concat(chunks);
+          const base64Image = buffer.toString('base64');
+          resolve(`data:image/${options.format || 'png'};base64,${base64Image}`);
+        });
+        stream.on('error', reject);
     });
-    
-    await browser.close();
-    
-    // Convert to base64
-    const base64Image = screenshot.toString('base64');
-    return `data:image/${options.format || 'png'};base64,${base64Image}`;
   }
   
   generateChatHTML(messages) {
@@ -370,19 +361,14 @@ app.listen(PORT, () => {
 ```dockerfile
 FROM node:18-alpine
 
-# Install Chromium
+# Install wkhtmltopdf and fonts
 RUN apk add --no-cache \
-    chromium \
-    nss \
-    freetype \
-    freetype-dev \
-    harfbuzz \
-    ca-certificates \
-    ttf-freefont
-
-# Tell Puppeteer to skip installing Chromium
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+    wkhtmltopdf \
+    ttf-freefont \
+    ttf-dejavu \
+    ttf-droid \
+    ttf-liberation \
+    ttf-ubuntu-font-family
 
 WORKDIR /app
 COPY package*.json ./

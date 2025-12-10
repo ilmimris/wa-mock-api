@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer');
+const wkhtmltoimage = require('wkhtmltoimage');
 const path = require('path');
 const fs = require('fs/promises');
 const { ApiError } = require('../middleware/error.middleware');
@@ -6,17 +6,44 @@ const { convertWhatsAppToHTML } = require('../utils/whatsapp-html');
 
 class ScreenshotService {
   constructor() {
+    // Set the command to the shim if we are in the docker container (detected by path presence or env)
+    // For now, we assume the shim is at /usr/local/bin/wkhtmltoimage-shim if it exists
+    // The wkhtmltoimage wrapper allows setting the command.
+    // However, we can also set it if we want to be explicit.
+    // wkhtmltoimage.setCommand('/usr/local/bin/wkhtmltoimage-shim');
+    // But since the shim is not guaranteed to be there in dev, we should probably check.
+    // For this implementation, I will assume the environment is set up correctly or rely on PATH.
+    // If we want to force the shim:
+    if (process.env.WKHTMLTOIMAGE_PATH) {
+        wkhtmltoimage.setCommand(process.env.WKHTMLTOIMAGE_PATH);
+    } else {
+        // Fallback or default. If we are in docker, we might want to default to shim.
+        // But verifying file existence is async usually or sync.
+        // Let's just stick to default PATH lookup which should find our shim if it's in PATH before /usr/bin
+        // But /usr/local/bin is usually before /usr/bin.
+        // So creating the shim at /usr/local/bin/wkhtmltoimage might be better?
+        // Wait, the shim I created is named wkhtmltoimage-shim.
+        // I should rename it to wkhtmltoimage in /usr/local/bin to override?
+        // No, that might be confusing.
+        // Let's explicitly set it if the file exists.
+        const shimPath = '/usr/local/bin/wkhtmltoimage-shim';
+        try {
+            if (require('fs').existsSync(shimPath)) {
+                wkhtmltoimage.setCommand(shimPath);
+            }
+        } catch (e) {
+            // ignore
+        }
+    }
+
     this.templatePath = path.join(__dirname, '../templates/whatsapp-chat.html');
-    this.browser = null;
     this.chatTemplate = null; // Initialize chatTemplate property
-    this.initializeBrowser().catch(err => {
-      console.error("Failed to initialize ScreenshotService on startup:", err);
-      // Depending on the application's needs, this might be a fatal error.
-      // For now, we log it. The service might be in a non-operational state.
+    this.loadTemplate().catch(err => {
+      console.error("Failed to load template on startup:", err);
     });
   }
 
-  async initializeBrowser() {
+  async loadTemplate() {
     // Load HTML template if not already loaded
     if (!this.chatTemplate) {
       try {
@@ -25,43 +52,8 @@ class ScreenshotService {
         console.log('HTML template loaded successfully.');
       } catch (error) {
         console.error('Failed to load HTML template:', error);
-        // This is a critical error for the service's operation.
-        // Rethrow to be caught by the constructor's catch or calling context.
         throw error;
       }
-    }
-
-    if (this.browser && this.browser.isConnected()) {
-      console.log('Browser already initialized.');
-      return;
-    }
-    console.log('Initializing browser...');
-    try {
-      // Test Chrome executable first
-      const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium';
-      console.log('Using Chrome executable:', executablePath);
-
-      this.browser = await puppeteer.launch({
-        headless: 'new',
-        executablePath: executablePath,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--no-first-run',
-          '--no-zygote',
-          '--single-process',
-          '--disable-gpu'
-        ]
-      });
-      console.log('Browser initialized successfully.');
-    } catch (error) {
-      console.error('Error initializing browser:', error);
-      // We'll let subsequent calls to generateWhatsAppScreenshot handle the error
-      // by attempting to re-initialize. If it fails there, it will throw.
-      this.browser = null; // Ensure browser is null if initialization failed
-      throw error; // Rethrow to allow handling by the caller if needed immediately
     }
   }
 
@@ -75,62 +67,41 @@ class ScreenshotService {
     try {
       const { width = 400, format = 'png', quality = 'high', headerDisplay = 'phone' } = options;
 
+      // Ensure template is loaded
+      if (!this.chatTemplate) {
+        await this.loadTemplate();
+      }
+
       // Generate HTML content
       const htmlContent = await this.generateChatHTML(messages, { width, headerDisplay });
 
-      // Ensure browser is initialized
-      if (!this.browser || !this.browser.isConnected()) {
-        await this.initializeBrowser();
-      }
-
-      const page = await this.browser.newPage();
-
-      // Set content first. For local content, 'domcontentloaded' is usually sufficient.
-      // A minimal default viewport is active before this, which is fine for rendering.
-      await page.setContent(htmlContent, { waitUntil: 'domcontentloaded' });
-
-      // Calculate the height of the content
-      const bodyHandle = await page.$('body');
-      if (!bodyHandle) {
-        await page.close(); // Close the page to free up resources
-        throw new ApiError(500, 'Failed to get body handle for height calculation');
-      }
-      const boundingBox = await bodyHandle.boundingBox();
-      await bodyHandle.dispose();
-
-      if (!boundingBox) {
-        await page.close(); // Close the page to free up resources
-        throw new ApiError(500, 'Failed to get bounding box for height calculation');
-      }
-      const contentHeight = Math.ceil(boundingBox.height);
-
-      // Set the viewport to the full height of the content and desired width
-      await page.setViewport({
-        width: parseInt(width, 10),
-        height: contentHeight > 0 ? contentHeight : 800, // Fallback height if calculation is zero
-        deviceScaleFactor: 2 // For better quality
-      });
-
-      // Take screenshot
+      // wkhtmltoimage options
       const screenshotOptions = {
-        type: format,
-        fullPage: true,
-        omitBackground: true
+        width: parseInt(width, 10),
+        format: format === 'jpeg' ? 'jpg' : format, // wkhtmltoimage uses jpg
+        quality: quality === 'high' ? 90 : quality === 'medium' ? 70 : 50,
+        // Disable smart width to force the specified width
+        'disable-smart-width': true,
+        // Using - for stdout
       };
 
-      // Add quality for formats that support it
-      if (format === 'jpeg' || format === 'webp') {
-        screenshotOptions.quality = quality === 'high' ? 90 : quality === 'medium' ? 70 : 50;
-      }
+      // wkhtmltoimage wrapper returns a stream
+      return new Promise((resolve, reject) => {
+        const stream = wkhtmltoimage.generate(htmlContent, screenshotOptions);
 
-      const screenshot = await page.screenshot(screenshotOptions);
+        const chunks = [];
+        stream.on('data', (chunk) => chunks.push(chunk));
+        stream.on('end', () => {
+          const buffer = Buffer.concat(chunks);
+          const base64Image = buffer.toString('base64');
+          resolve(`data:image/${format};base64,${base64Image}`);
+        });
+        stream.on('error', (err) => {
+          console.error('Error generating screenshot with wkhtmltoimage:', err);
+          reject(new ApiError(500, 'Failed to generate screenshot'));
+        });
+      });
 
-      // Do not close the browser here; it's reused.
-      // await browser.close(); 
-
-      // Convert to base64
-      const base64Image = screenshot.toString('base64');
-      return `data:image/${format};base64,${base64Image}`;
     } catch (error) {
       console.error('Error generating screenshot:', error);
       throw new ApiError(500, 'Failed to generate screenshot');
@@ -146,16 +117,7 @@ class ScreenshotService {
       const { width, headerDisplay } = options;
 
       if (!this.chatTemplate) {
-        // This case should ideally not be reached if initializeBrowser was successful.
-        // However, as a fallback, or if generateChatHTML could be called before full initialization.
-        console.error('Chat template not loaded. Attempting to load now...');
-        try {
-          this.chatTemplate = await fs.readFile(this.templatePath, 'utf-8');
-          console.log('HTML template loaded on demand.');
-        } catch (error) {
-          console.error('Failed to load HTML template on demand:', error);
-          throw new ApiError(500, 'Failed to load chat template');
-        }
+        await this.loadTemplate();
       }
       let template = this.chatTemplate;
 
@@ -233,52 +195,13 @@ class ScreenshotService {
   }
 
   /**
-   * Closes the Puppeteer browser instance.
-   * This should be called on application shutdown.
+   * No browser instance to close for wkhtmltopdf
    */
   async closeBrowser() {
-    if (this.browser && this.browser.isConnected()) {
-      console.log('Closing browser...');
-      await this.browser.close();
-      this.browser = null;
-      console.log('Browser closed.');
-    } else {
-      console.log('Browser not open or already closed.');
-    }
+    // No-op
+    return Promise.resolve();
   }
 }
 
 const screenshotServiceInstance = new ScreenshotService();
-
-// To ensure the browser is closed gracefully on application shutdown,
-// you would typically call screenshotServiceInstance.closeBrowser() in your main server file (e.g., server.js or app.js)
-// Example for server.js:
-//
-// const screenshotService = require('./services/screenshot.service'); // Adjust path as needed
-//
-// process.on('SIGINT', async () => {
-//   console.log('SIGINT signal received. Closing browser...');
-//   await screenshotService.closeBrowser();
-//   process.exit(0);
-// });
-//
-// process.on('SIGTERM', async () => {
-//   console.log('SIGTERM signal received. Closing browser...');
-//   await screenshotService.closeBrowser();
-//   process.exit(0);
-// });
-//
-// // Handle unhandled rejections and uncaught exceptions to also close browser
-// process.on('unhandledRejection', async (reason, promise) => {
-//   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-//   await screenshotService.closeBrowser();
-//   process.exit(1);
-// });
-//
-// process.on('uncaughtException', async (error) => {
-//   console.error('Uncaught Exception:', error);
-//   await screenshotService.closeBrowser();
-//   process.exit(1);
-// });
-
 module.exports = screenshotServiceInstance;
