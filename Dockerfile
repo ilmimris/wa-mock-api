@@ -1,9 +1,11 @@
 FROM node:18-slim
 
 # Install wkhtmltopdf, xvfb (required for unpatched wkhtmltopdf), and fonts
+# We also install dumb-init to handle signals and zombies properly
 RUN apt-get update && apt-get install -y \
     wkhtmltopdf \
     xvfb \
+    dumb-init \
     fonts-freefont-ttf \
     fonts-dejavu-core \
     fonts-liberation \
@@ -16,12 +18,12 @@ RUN apt-get update && apt-get install -y \
     fonts-symbola \
     && rm -rf /var/lib/apt/lists/*
 
-# Create a shim for wkhtmltoimage that runs it with xvfb-run
-# This is necessary because the npm wrapper calls 'wkhtmltoimage' directly
-RUN echo '#!/bin/bash\nxvfb-run -a /usr/bin/wkhtmltoimage "$@"' > /usr/local/bin/wkhtmltoimage-shim && \
-    chmod +x /usr/local/bin/wkhtmltoimage-shim
+# Setup Xvfb as a background process script
+RUN echo '#!/bin/bash\nXvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &\nexec "$@"' > /entrypoint.sh && \
+    chmod +x /entrypoint.sh
 
 ENV NODE_ENV=production
+ENV DISPLAY=:99
 
 WORKDIR /app
 COPY package*.json ./
@@ -30,4 +32,5 @@ RUN npm ci --only=production
 COPY . .
 
 EXPOSE 3000
+ENTRYPOINT ["/usr/bin/dumb-init", "--", "/entrypoint.sh"]
 CMD ["node", "server.js"]

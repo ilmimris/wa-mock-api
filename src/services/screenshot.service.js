@@ -6,34 +6,11 @@ const { convertWhatsAppToHTML } = require('../utils/whatsapp-html');
 
 class ScreenshotService {
   constructor() {
-    // Set the command to the shim if we are in the docker container (detected by path presence or env)
-    // For now, we assume the shim is at /usr/local/bin/wkhtmltoimage-shim if it exists
-    // The wkhtmltoimage wrapper allows setting the command.
-    // However, we can also set it if we want to be explicit.
-    // wkhtmltoimage.setCommand('/usr/local/bin/wkhtmltoimage-shim');
-    // But since the shim is not guaranteed to be there in dev, we should probably check.
-    // For this implementation, I will assume the environment is set up correctly or rely on PATH.
-    // If we want to force the shim:
+    // In Docker, we rely on the default PATH finding /usr/bin/wkhtmltoimage
+    // and the DISPLAY environment variable being set for Xvfb support.
+    // No explicit command setting is needed unless overriding.
     if (process.env.WKHTMLTOIMAGE_PATH) {
         wkhtmltoimage.setCommand(process.env.WKHTMLTOIMAGE_PATH);
-    } else {
-        // Fallback or default. If we are in docker, we might want to default to shim.
-        // But verifying file existence is async usually or sync.
-        // Let's just stick to default PATH lookup which should find our shim if it's in PATH before /usr/bin
-        // But /usr/local/bin is usually before /usr/bin.
-        // So creating the shim at /usr/local/bin/wkhtmltoimage might be better?
-        // Wait, the shim I created is named wkhtmltoimage-shim.
-        // I should rename it to wkhtmltoimage in /usr/local/bin to override?
-        // No, that might be confusing.
-        // Let's explicitly set it if the file exists.
-        const shimPath = '/usr/local/bin/wkhtmltoimage-shim';
-        try {
-            if (require('fs').existsSync(shimPath)) {
-                wkhtmltoimage.setCommand(shimPath);
-            }
-        } catch (e) {
-            // ignore
-        }
     }
 
     this.templatePath = path.join(__dirname, '../templates/whatsapp-chat.html');
