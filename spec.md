@@ -67,8 +67,9 @@ Content-Type: application/json
 - Alternative: Python with Flask/FastAPI
 
 **3.2 Image Generation**
-- wkhtmltoimage (WebKit-based HTML to image converter)
+- Puppeteer (headless Chrome) for screenshot generation
 - Sharp library for image optimization
+- Canvas API for direct rendering (alternative)
 
 **3.3 Template Engine**
 - HTML/CSS templates for WhatsApp UI
@@ -77,15 +78,16 @@ Content-Type: application/json
 ### 4. System Requirements
 
 **4.1 Server Requirements**
-- Node.js 18+
-- wkhtmltopdf/wkhtmltoimage package installed
-- 1GB RAM minimum (2GB recommended)
+- Node.js 18+ or Python 3.8+
+- Headless Chrome/Chromium
+- 2GB RAM minimum (4GB recommended)
 - Linux/Ubuntu server environment
 
 **4.2 Dependencies**
 ```json
 {
   "express": "^4.18.0",
+  "puppeteer": "^21.0.0",
   "sharp": "^0.32.0",
   "joi": "^17.9.0",
   "helmet": "^7.0.0",
@@ -120,42 +122,41 @@ whatsapp-api/
 
 ```javascript
 // screenshot.service.js
-const { spawn } = require('child_process');
-const fs = require('fs/promises');
-const os = require('os');
-const path = require('path');
+const puppeteer = require('puppeteer');
+const sharp = require('sharp');
 
 class ScreenshotService {
   async generateWhatsAppScreenshot(messages, options = {}) {
-    const { width = 400, format = 'png', quality = 'high' } = options;
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+    
+    const page = await browser.newPage();
+    
+    // Set viewport to mobile size
+    await page.setViewport({
+      width: options.width || 400,
+      height: 800,
+      deviceScaleFactor: 2
+    });
     
     // Generate HTML content
     const htmlContent = this.generateChatHTML(messages);
+    await page.setContent(htmlContent);
     
-    // Write HTML to temp file
-    const tempDir = os.tmpdir();
-    const inputPath = path.join(tempDir, `wa-${Date.now()}.html`);
-    const outputPath = path.join(tempDir, `wa-${Date.now()}.${format}`);
-    await fs.writeFile(inputPath, htmlContent, 'utf-8');
+    // Take screenshot
+    const screenshot = await page.screenshot({
+      type: options.format || 'png',
+      quality: options.format === 'jpeg' ? 90 : undefined,
+      fullPage: true
+    });
     
-    // Run wkhtmltoimage
-    const args = [
-      '--width', String(width),
-      '--format', format,
-      '--enable-local-file-access',
-      inputPath, outputPath
-    ];
-    await this.runWkhtmltoimage(args);
+    await browser.close();
     
-    // Read and convert to base64
-    const imageBuffer = await fs.readFile(outputPath);
-    const base64Image = imageBuffer.toString('base64');
-    
-    // Cleanup temp files
-    await fs.unlink(inputPath).catch(() => {});
-    await fs.unlink(outputPath).catch(() => {});
-    
-    return `data:image/${format};base64,${base64Image}`;
+    // Convert to base64
+    const base64Image = screenshot.toString('base64');
+    return `data:image/${options.format || 'png'};base64,${base64Image}`;
   }
   
   generateChatHTML(messages) {
@@ -367,18 +368,21 @@ app.listen(PORT, () => {
 ### 10. Docker Configuration
 
 ```dockerfile
-FROM node:18-slim
+FROM node:18-alpine
 
-# Install wkhtmltopdf and fonts
-RUN apt-get update && apt-get install -y \
-    wkhtmltopdf \
-    fonts-ipafont-gothic \
-    fonts-wqy-zenhei \
-    fonts-thai-tlwg \
-    fonts-noto \
-    fonts-freefont-ttf \
-    --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/*
+# Install Chromium
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont
+
+# Tell Puppeteer to skip installing Chromium
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 WORKDIR /app
 COPY package*.json ./
@@ -414,12 +418,12 @@ CMD ["node", "server.js"]
 - `400`: Bad Request (validation errors)
 - `422`: Unprocessable Entity (invalid data format)
 - `500`: Internal Server Error
-- `503`: Service Unavailable (wkhtmltoimage issues)
+- `503`: Service Unavailable (Puppeteer issues)
 
 ### 12. Performance & Scaling
 
 **12.1 Optimization Strategies**
-- Parallel wkhtmltoimage execution for concurrent requests
+- Browser instance pooling for Puppeteer
 - Image compression with Sharp
 - Request rate limiting
 - Caching for template rendering
