@@ -190,7 +190,7 @@ class ScreenshotService {
         timeZone: "Asia/Jakarta",
         hour: '2-digit',
         minute: '2-digit',
-        hour12: true
+        hourCycle: 'h23'
       });
 
       // Generate messages HTML
@@ -200,7 +200,7 @@ class ScreenshotService {
           // msg.timestamp is already in Asia/Jakarta
           hour: '2-digit',
           minute: '2-digit',
-          hour12: true
+          hourCycle: 'h23'
         });
 
         // Format WhatsApp message formatting into html 
